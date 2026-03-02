@@ -7,8 +7,8 @@ on:
       - "dev_v*"
 
 jobs:
-  # 打包Android、iOS、Mac
-  build-mac-ios-android:
+  # 打包Android、iOS、Mac（暂时禁用）
+  # build-mac-ios-android:
     runs-on: macos-latest
 
     permissions:
@@ -123,7 +123,8 @@ jobs:
       #完成
       - run: echo "🍏 This job's status is ${{ job.status }}."
 
-  # 打包Linux
+  # 打包Linux（暂时禁用）
+  # build-linux:
   build-linux:
     runs-on: ubuntu-22.04
     permissions:
@@ -172,7 +173,8 @@ jobs:
         #完成
       - run: echo "🍏 Linux job's status is ${{ job.status }}."
 
-  # 打包Windows
+  # 打包Windows（保留）
+  build-windows:
   build-windows:
     runs-on: windows-latest
     permissions:
