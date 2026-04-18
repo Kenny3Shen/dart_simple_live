@@ -32,20 +32,41 @@ jobs:
           flutter-version: "3.38.x"
           cache: true
 
-      # APK 签名设置
-      - name: Download Android keystore
-        id: android_keystore
-        uses: timheuer/base64-to-file@v1.2
-        with:
-          fileName: keystore.jks
-          encodedString: ${{ secrets.KEYSTORE_BASE64 }}
-
-      - name: Create key.properties
+      # APK 签名设置（无 Secrets 时自动生成临时 keystore）
+      - name: Prepare Android keystore
+        shell: bash
         run: |
-          echo "storeFile=${{ steps.android_keystore.outputs.filePath }}" > simple_live_app/android/key.properties
-          echo "storePassword=${{ secrets.STORE_PASSWORD }}" >> simple_live_app/android/key.properties
-          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> simple_live_app/android/key.properties
-          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> simple_live_app/android/key.properties
+          set -euo pipefail
+          KEYSTORE_PATH="$RUNNER_TEMP/keystore.jks"
+
+          if [[ -n "${{ secrets.KEYSTORE_BASE64 }}" ]]; then
+            echo "Using keystore from repository secrets."
+            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > "$KEYSTORE_PATH"
+            STORE_PASSWORD="${{ secrets.STORE_PASSWORD }}"
+            KEY_PASSWORD="${{ secrets.KEY_PASSWORD }}"
+            KEY_ALIAS="${{ secrets.KEY_ALIAS }}"
+          else
+            echo "KEYSTORE_BASE64 is empty, generating a temporary keystore for CI build."
+            keytool -genkeypair -v \
+              -keystore "$KEYSTORE_PATH" \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+            STORE_PASSWORD="android"
+            KEY_PASSWORD="android"
+            KEY_ALIAS="androiddebugkey"
+          fi
+
+          {
+            echo "storeFile=$KEYSTORE_PATH"
+            echo "storePassword=$STORE_PASSWORD"
+            echo "keyPassword=$KEY_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+          } > simple_live_app/android/key.properties
 
       # 更新 Flutter 依赖
       - name: Restore Packages
